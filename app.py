@@ -101,7 +101,15 @@ def main():
         c1,c2=st.columns(2)
         with c1:st.plotly_chart(px.histogram(d,x="Network_Latency_ms",nbins=40,title="Latency distribution"),width="stretch")
         with c2:st.plotly_chart(px.scatter(v,x="Network_Latency_ms",y="Packet_Loss_%",color="Operation_Mode",opacity=.65,title="Latency vs packet loss"),width="stretch")
-        st.dataframe(d.Network_Latency_ms.quantile([.5,.75,.9,.95,.99]).rename("Latency (ms)").reset_index(names="Percentile"),hide_index=True,width="stretch");st.metric("High-latency events (>30 ms)",f"{(d.Network_Latency_ms>30).sum():,}")
+        latency_series = pd.to_numeric(d["Network_Latency_ms"], errors="coerce").dropna()
+        if latency_series.empty:
+            st.warning("No valid latency observations are available for the selected filters.")
+        else:
+            latency_percentiles = (latency_series.quantile([.50, .75, .90, .95, .99])
+                                   .rename("Latency (ms)").rename_axis("Percentile").reset_index())
+            latency_percentiles["Percentile"] = ["P50", "P75", "P90", "P95", "P99"]
+            st.dataframe(latency_percentiles.style.format({"Latency (ms)": "{:.2f}"}), hide_index=True, width="stretch")
+        st.metric("High-latency events (>30 ms)", f"{(latency_series > 30).sum():,}")
     with tabs[2]:
         st.subheader("Manufacturing efficiency");c1,c2=st.columns(2)
         with c1:line(daily,["Production_Speed_units_per_hr","Efficiency_Index"],"Production speed and efficiency")
