@@ -15,12 +15,35 @@ import streamlit as st
 st.set_page_config(page_title="Unified Mentor | 6G Factory Analytics", page_icon="◈", layout="wide")
 st.markdown("""
 <style>
-  .stApp { background: #f7f9fc; }
-  h1 { color: #14213d; letter-spacing: -0.04em; }
-  [data-testid="stMetric"] { background: #fff; border: 1px solid #e5eaf2; border-radius: 12px; padding: 14px; }
-  [data-testid="stSidebar"] { background: #fff; }
+  :root { --ink: #10213e; --muted: #5d6d86; --blue: #2563eb; --navy: #0b1830; --line: #dce5f1; }
+  .stApp, [data-testid="stAppViewContainer"] { background: #f4f7fb; color: var(--ink); }
+  .block-container { max-width: 1440px; padding-top: 2.15rem; padding-bottom: 3rem; }
+  h1, h2, h3, p, label, [data-testid="stMarkdownContainer"] { color: var(--ink); }
+  h1 { font-size: 2.35rem; font-weight: 760; letter-spacing: -.045em; margin-bottom: .1rem; }
+  h2, h3 { letter-spacing: -.02em; }
+  [data-testid="stCaptionContainer"] { color: var(--muted); }
+  [data-testid="stSidebar"] { background: var(--navy); border-right: 1px solid #203a63; }
+  [data-testid="stSidebar"] * { color: #f2f7ff; }
+  [data-testid="stSidebar"] [data-testid="stCaptionContainer"] { color: #bfd0ed; }
+  [data-testid="stSidebar"] input, [data-testid="stSidebar"] [data-baseweb="select"] > div { background: #14294d; color: white; border-color: #48648e; }
+  [data-testid="stSidebar"] [data-baseweb="tag"] { background: #2563eb; }
+  [data-testid="stMetric"] { background: white; border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; box-shadow: 0 4px 15px rgba(35, 62, 108, .06); }
+  [data-testid="stMetricLabel"] { color: var(--muted); font-size: .84rem; font-weight: 650; }
+  [data-testid="stMetricValue"] { color: var(--ink); font-weight: 750; }
+  [data-testid="stMetricDelta"] { font-weight: 650; }
+  [data-baseweb="tab-list"] { gap: .55rem; border-bottom: 1px solid var(--line); }
+  button[data-baseweb="tab"] { color: #5f6f88; font-weight: 650; padding: .7rem 1rem; }
+  button[data-baseweb="tab"][aria-selected="true"] { color: #1d4ed8; border-bottom-color: #2563eb; }
+  [data-testid="stDataFrame"] { border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+  [data-testid="stDownloadButton"] button { background: #2563eb; color: white; border: 0; border-radius: 8px; font-weight: 650; }
+  .hero { background: linear-gradient(115deg, #0b1830 0%, #173c7a 58%, #2563eb 100%); border-radius: 18px; padding: 25px 30px; margin: 0 0 1.5rem; box-shadow: 0 13px 30px rgba(24, 55, 108, .16); }
+  .hero h2 { color: white; margin: 0; font-size: 1.35rem; }
+  .hero p { color: #dbeafe; margin: .45rem 0 0; font-size: .98rem; }
 </style>
 """, unsafe_allow_html=True)
+
+px.defaults.template = "plotly_white"
+px.defaults.color_discrete_sequence = ["#2563eb", "#0f9f9a", "#8b5cf6", "#e98c17", "#db3f87"]
 
 REQUIRED_COLUMNS = {
     "Date", "Machine_ID", "Operation_Mode", "Temperature_C",
@@ -96,7 +119,13 @@ def metric(label: str, value: str, delta: str | None = None) -> None:
 
 
 st.title("6G Factory Intelligence")
-st.caption("Network performance, manufacturing efficiency, and quality insight in one operational view.")
+st.caption("Operational analytics for network performance, manufacturing efficiency, and product quality.")
+st.markdown("""
+<div class="hero">
+  <h2>Connected factory command center</h2>
+  <p>Spot network conditions that reduce output, increase defects, or create maintenance risk - before they become downtime.</p>
+</div>
+""", unsafe_allow_html=True)
 
 with st.sidebar:
     st.header("Data & filters")
@@ -127,14 +156,18 @@ if data.empty:
     st.warning("No records match these filters.")
     st.stop()
 
+# Use all selected data for calculations, and a fixed representative sample only
+# for point charts so the page remains quick with the 100,000-row data set.
+chart_data = data.sample(n=min(5_000, len(data)), random_state=42)
+
 overview, efficiency, quality, optimize = st.tabs(["Network overview", "Efficiency analysis", "Quality & errors", "6G optimization"])
 
 with overview:
     a, b, c, d = st.columns(4)
-    metric("Network stability", f"{data['Network_Stability_Index'].mean():.1f}/100", "Target ≥ 85")
-    metric("Average latency", f"{data['Network_Latency_ms'].mean():.1f} ms", f"P95 {data['Network_Latency_ms'].quantile(.95):.1f} ms")
-    metric("Packet loss", f"{data['Packet_Loss_%'].mean():.2f}%", "Target < 0.50%")
-    metric("High-efficiency output", f"{(data['Efficiency_Status'] == 'High').mean():.0%}", f"{len(data):,} observations")
+    with a: metric("Network stability", f"{data['Network_Stability_Index'].mean():.1f}/100", "Target >= 85")
+    with b: metric("Average latency", f"{data['Network_Latency_ms'].mean():.1f} ms", f"P95 {data['Network_Latency_ms'].quantile(.95):.1f} ms")
+    with c: metric("Packet loss", f"{data['Packet_Loss_%'].mean():.2f}%", "Target < 0.50%")
+    with d: metric("High-efficiency output", f"{(data['Efficiency_Status'] == 'High').mean():.0%}", f"{len(data):,} observations")
     trend = data.set_index("Timestamp").resample("D").agg({"Network_Latency_ms": "mean", "Packet_Loss_%": "mean", "Network_Stability_Index": "mean"}).reset_index()
     left, right = st.columns((2, 1))
     with left:
@@ -147,12 +180,12 @@ with overview:
 
 with efficiency:
     a, b, c = st.columns(3)
-    metric("Mean efficiency index", f"{data['Efficiency_Index'].mean():.1f}/100")
-    metric("Production speed", f"{data['Production_Speed_units_per_hr'].mean():.1f} units/hr")
-    metric("Defect rate", f"{data['Quality_Control_Defect_Rate_%'].mean():.2f}%")
+    with a: metric("Mean efficiency index", f"{data['Efficiency_Index'].mean():.1f}/100")
+    with b: metric("Production speed", f"{data['Production_Speed_units_per_hr'].mean():.1f} units/hr")
+    with c: metric("Defect rate", f"{data['Quality_Control_Defect_Rate_%'].mean():.2f}%")
     left, right = st.columns(2)
     with left:
-        fig = px.scatter(data, x="Network_Latency_ms", y="Production_Speed_units_per_hr", color="Operation_Mode", size="Efficiency_Index", hover_data=["Machine_ID", "Packet_Loss_%"], title="Production speed declines as latency rises", opacity=.65)
+        fig = px.scatter(chart_data, x="Network_Latency_ms", y="Production_Speed_units_per_hr", color="Operation_Mode", size="Efficiency_Index", hover_data=["Machine_ID", "Packet_Loss_%"], title="Production speed declines as latency rises", opacity=.72)
         st.plotly_chart(fig, use_container_width=True)
     with right:
         by_mode = data.groupby("Operation_Mode", as_index=False).agg(Efficiency_Index=("Efficiency_Index", "mean"), Production_Speed_units_per_hr=("Production_Speed_units_per_hr", "mean"))
@@ -163,12 +196,12 @@ with efficiency:
 
 with quality:
     a, b, c = st.columns(3)
-    metric("Error rate", f"{data['Error_Rate_%'].mean():.2f}%")
-    metric("Defect rate", f"{data['Quality_Control_Defect_Rate_%'].mean():.2f}%")
-    metric("At-risk machines", str(data.groupby("Machine_ID")["Predictive_Maintenance_Score"].mean().lt(60).sum()))
+    with a: metric("Error rate", f"{data['Error_Rate_%'].mean():.2f}%")
+    with b: metric("Defect rate", f"{data['Quality_Control_Defect_Rate_%'].mean():.2f}%")
+    with c: metric("At-risk machines", str(data.groupby("Machine_ID")["Predictive_Maintenance_Score"].mean().lt(60).sum()))
     left, right = st.columns(2)
     with left:
-        st.plotly_chart(px.scatter(data, x="Packet_Loss_%", y="Quality_Control_Defect_Rate_%", color="Latency_Band", hover_data=["Machine_ID", "Error_Rate_%"], title="Packet loss impact on quality", color_discrete_map={"Low":"#22c55e","Medium":"#f59e0b","High":"#ef4444"}), use_container_width=True)
+        st.plotly_chart(px.scatter(chart_data, x="Packet_Loss_%", y="Quality_Control_Defect_Rate_%", color="Latency_Band", hover_data=["Machine_ID", "Error_Rate_%"], title="Packet loss impact on quality", opacity=.72, color_discrete_map={"Low":"#16a34a","Medium":"#d97706","High":"#dc2626"}), use_container_width=True)
     with right:
         ranked = data.groupby("Machine_ID", as_index=False).agg(Error_Rate=("Error_Rate_%", "mean"), Defect_Rate=("Quality_Control_Defect_Rate_%", "mean"), Maintenance_Score=("Predictive_Maintenance_Score", "mean")).sort_values("Error_Rate", ascending=False)
         st.plotly_chart(px.bar(ranked, x="Machine_ID", y=["Error_Rate", "Defect_Rate"], barmode="group", title="Error and defect rates by machine"), use_container_width=True)
