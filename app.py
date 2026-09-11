@@ -25,7 +25,20 @@ st.markdown("""
   [data-testid="stSidebar"] { background: var(--navy); border-right: 1px solid #203a63; }
   [data-testid="stSidebar"] * { color: #f2f7ff; }
   [data-testid="stSidebar"] [data-testid="stCaptionContainer"] { color: #bfd0ed; }
-  [data-testid="stSidebar"] input, [data-testid="stSidebar"] [data-baseweb="select"] > div { background: #14294d; color: white; border-color: #48648e; }
+  [data-testid="stSidebar"] label { color: #f2f7ff !important; font-weight: 650; }
+  [data-testid="stSidebar"] input, [data-testid="stSidebar"] input::placeholder,
+  [data-testid="stSidebar"] [data-baseweb="input"] input,
+  [data-testid="stSidebar"] [data-baseweb="select"] > div { background: #14294d; color: #f8fbff !important; border-color: #48648e; }
+  [data-testid="stSidebar"] [data-baseweb="input"],
+  [data-testid="stSidebar"] [data-baseweb="select"] > div { background: #14294d !important; border-color: #48648e !important; }
+  [data-testid="stSidebar"] [data-testid="stDateInput"] [data-baseweb="input"] { background: #14294d !important; border-color: #48648e !important; }
+  [data-testid="stSidebar"] [data-testid="stDateInput"] input { background: transparent !important; color: #f8fbff !important; -webkit-text-fill-color: #f8fbff; }
+  [data-testid="stSidebar"] [data-testid="stFileUploaderDropzone"] { background: #14294d; border: 1px dashed #5b7ead; }
+  [data-testid="stSidebar"] [data-testid="stFileUploaderDropzone"] *,
+  [data-testid="stSidebar"] [data-testid="stFileUploaderDropzoneInstructions"] * { color: #e7f0ff !important; }
+  [data-testid="stSidebar"] [data-testid="stFileUploaderDropzone"] button { background: #2563eb; color: #fff !important; border: 0; }
+  [data-testid="stSidebar"] [data-baseweb="slider"] [role="slider"] { background: #60a5fa; }
+  [data-testid="stSidebar"] svg { fill: #dbeafe; }
   [data-testid="stSidebar"] [data-baseweb="tag"] { background: #2563eb; }
   [data-testid="stMetric"] { background: white; border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; box-shadow: 0 4px 15px rgba(35, 62, 108, .06); }
   [data-testid="stMetricLabel"] { color: var(--muted); font-size: .84rem; font-weight: 650; }
@@ -143,15 +156,18 @@ with st.sidebar:
         st.caption("Using demo telemetry")
     dates = source["Timestamp"].dt.date
     selected_dates = st.date_input("Date range", value=(dates.min(), dates.max()), min_value=dates.min(), max_value=dates.max())
-    machines = st.multiselect("Machines", sorted(source["Machine_ID"].unique()), default=sorted(source["Machine_ID"].unique()))
-    modes = st.multiselect("Operation modes", sorted(source["Operation_Mode"].unique()), default=sorted(source["Operation_Mode"].unique()))
+    machines = st.multiselect("Machines", sorted(source["Machine_ID"].unique()), placeholder="All machines")
+    modes = st.multiselect("Operation modes", sorted(source["Operation_Mode"].unique()), placeholder="All operation modes")
+    st.caption("Leave machine and mode filters blank to include all data.")
     latency_limit = st.slider("Maximum latency (ms)", 10, int(np.ceil(source["Network_Latency_ms"].max())), int(np.ceil(source["Network_Latency_ms"].max())))
 
 if len(selected_dates) != 2:
     st.info("Select a start and end date to view the dashboard.")
     st.stop()
 start, end = pd.Timestamp(selected_dates[0]).date(), pd.Timestamp(selected_dates[1]).date()
-data = source[(source["Timestamp"].dt.date.between(start, end)) & source["Machine_ID"].isin(machines) & source["Operation_Mode"].isin(modes) & (source["Network_Latency_ms"] <= latency_limit)]
+machine_filter = machines or source["Machine_ID"].unique()
+mode_filter = modes or source["Operation_Mode"].unique()
+data = source[(source["Timestamp"].dt.date.between(start, end)) & source["Machine_ID"].isin(machine_filter) & source["Operation_Mode"].isin(mode_filter) & (source["Network_Latency_ms"] <= latency_limit)]
 if data.empty:
     st.warning("No records match these filters.")
     st.stop()
