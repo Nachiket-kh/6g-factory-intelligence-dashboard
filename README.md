@@ -1,22 +1,41 @@
-# 6G Factory Intelligence Dashboard
+# 6G Factory Intelligence
 
-A Streamlit implementation of the **Impact of 6G Network Performance on Manufacturing Efficiency in Smart Factories** brief.
+An industrial analytics command center for studying the **Impact of 6G Network Performance on Manufacturing Efficiency in Smart Factories**.
 
-## Run it
+## Features
+
+- Executive KPI dashboard with calculated Factory Health
+- Network performance, latency percentile, packet-loss, and machine analysis
+- Manufacturing efficiency correlations calculated from the filtered data
+- Quality and error-risk analysis with transparent thresholds
+- Analytical predictive-maintenance and machine-health indicators
+- 6G scenario estimate, machine explorer, data explorer, and CSV downloads
+- Global date, machine, operation-mode, status, latency, and packet-loss filters
+
+## Dataset and methodology
+
+The included Thales manufacturing telemetry file contains 100,000 records. The app uses it by default and accepts compatible CSV uploads. Required columns are listed in `app.py`; uploads must also include `Time` or `Timestamp` with `Date`.
+
+Derived indices are transparent: Network Stability combines latency and packet loss; Efficiency combines network, quality, and maintenance readiness; Factory Health is the mean of network stability, efficiency, and machine-health score. These are analytical indicators, not measured 6G outcomes or a trained failure-prediction model.
+
+## Run locally
 
 ```powershell
 py -m pip install -r requirements.txt
-py -m streamlit run app.py
+streamlit run app.py
 ```
 
-The supplied **Thales Group Manufacturing** dataset is included as the default source (100,000 records). Upload a CSV to replace it. If the local dataset is removed, the application falls back to a realistic deterministic demo data set. Uploaded data must contain the following fields:
+## Deployment
 
-`Date`, `Machine_ID`, `Operation_Mode`, `Temperature_C`, `Vibration_Hz`, `Power_Consumption_kW`, `Network_Latency_ms`, `Packet_Loss_%`, `Quality_Control_Defect_Rate_%`, `Production_Speed_units_per_hr`, `Predictive_Maintenance_Score`, `Error_Rate_%`, and `Efficiency_Status`, plus either `Time` or `Timestamp` for the time component.
+The repository is Streamlit Community Cloud compatible. Create an app from this repository, select the `main` branch, and set the entry point to `app.py`. The committed `.streamlit/config.toml` defines the theme and upload limit.
 
-## Included analysis
+## Project contents
 
-- Network stability, latency, and packet-loss monitoring
-- Efficiency and production-speed impact analysis
-- Quality/error diagnostics and maintenance risk ranking
-- Filterable machine, operation mode, and time-window controls
-- Data export and 6G-oriented optimization recommendations
+- `app.py` - dashboard, validation, calculations, and visualizations
+- `data/` - default manufacturing dataset
+- `output/pdf/` - technical report
+- `tests/` - processing and validation tests
+
+## Limitations
+
+The analysis identifies associations in the supplied telemetry; it does not establish causality. The 6G Optimization page labels its result as a scenario estimate and explains its linear-association assumption.
